@@ -57,3 +57,8 @@ Contributors
 
 * Mark Galloway
 * Abram Hindle
+* Xin Yi Wang
+
+Code in sockets.py, index.html have referenced following repo
+============
+https://github.com/abramhindle/WebSocketsExamples
