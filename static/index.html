@@ -44,11 +44,15 @@ debug("Test");
 
 world = {};
 
+function getRandomArbitrary(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
 //XXX: TODO Make this prettier!
 function drawCircle(context,entity) {
     with(context) {
         beginPath();                
-        lineWidth = 3;
+        lineWidth = getRandomArbitrary(3,10);
         var x = entity["x"];
         var y = entity["y"];
         //moveTo(x,y);
@@ -125,7 +129,12 @@ function addEntity(entity, data) {
     world[entity] = data;
     drawNextFrame(); // (but should we?)
     //XXX: Send a XHTML Request that updates the entity you just modified!
+    var jsonObj = {};
+    jsonObj[entity] = data;
+    console.log(jsonObj);
+    socket.send(JSON.stringify(jsonObj));
 }
+
 var counter = 0;
 function addEntityWithoutName(data) {
     var name = "X"+(counter++)%100;
@@ -229,17 +238,28 @@ mouse = (function() {
 })();
 
 // Add the application specific mouse listeners!
+//random color frunction from http://stackoverflow.com/a/1484514
+function getRandomColor() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i < 6; i++ ) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
+// Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    addEntityWithoutName({'x':x,'y':y,'colour':getRandomColor()});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    addEntityWithoutName({'x':x,'y':y,'colour':getRandomColor()});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
+    addEntityWithoutName({'x':x,'y':y,'colour':getRandomColor(),
                           'radius':10});
 });
 
@@ -254,6 +274,28 @@ function wsSetup() {
     socket = new WebSocket(url);
     socket.onopen = function() {
         //XXX: TODO What are you going to do here?
+        //code from https://github.com/abramhindle/CMPUT404-assignment-ajax/blob/master/static/index.html
+        //by Abram Hindle
+        var url2 = "http://" + host + "/world"
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url2);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState==4) {
+                try {
+                    if (xhr.status==200) {
+                        //XXX: parse some JSON from the request!
+                        var parsedJSON = JSON.parse(xhr.responseText);
+                        for(i in parsedJSON) {
+                            world[i] = parsedJSON[i];
+                        }
+                    }
+                } 
+                catch(e) {
+                    alert('Error: ' + e.name);
+                }
+            }
+        };
+        xhr.send(null);
     };
     socket.onerror = function(msg) {
         debug("WebSocket Error:" + msg.data);
@@ -261,7 +303,12 @@ function wsSetup() {
     socket.onmessage = function(msg) {  
         try {
             debug("WebSocket Recv:" + msg.data);
-            //XXX: TODO What are you going to do here?            
+            //XXX: TODO What are you going to do here? 
+            var parsedJSON = JSON.parse(msg.data);
+            for(i in parsedJSON) {
+                world[i] = parsedJSON[i];
+            }
+            drawNextFrame();            
         } catch (e) {
             alert("socket on message: " + e);
         }
